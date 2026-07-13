@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SnapLink | Premium URL Shortener</title>
+    <!-- Tailwind CSS for modern styling -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex flex-col items-center justify-center p-6">
+
+    <div class="w-full max-w-md bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700">
+        <h1 class="text-3xl font-extrabold text-center mb-2 bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">SnapLink</h1>
+        <p class="text-slate-400 text-center text-sm mb-6">Shorten URLs, set limits, and generate QR codes instantly.</p>
+
+        <!-- Input Form -->
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Destination URL</label>
+                <input type="url" id="originalUrl" placeholder="https://example.com/very-long-link" 
+                       class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg focus:outline-none focus:border-cyan-500 text-white placeholder-slate-500">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Max Allowed Clicks (Optional)</label>
+                <input type="number" id="maxClicks" placeholder="e.g., 5" min="1"
+                       class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg focus:outline-none focus:border-cyan-500 text-white placeholder-slate-500">
+            </div>
+            <button onclick="shortenUrl()" 
+                    class="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold rounded-lg transition-all shadow-lg cursor-pointer">
+                Shorten Link
+            </button>
+        </div>
+
+        <!-- Result Box (Hidden by default) -->
+        <div id="resultBox" class="hidden mt-8 pt-6 border-t border-slate-700 space-y-4 animate-fade-in">
+            <div class="bg-slate-900 p-4 rounded-lg border border-slate-700/50">
+                <label class="block text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-1">Your Short Link</label>
+                <div class="flex items-center justify-between">
+                    <a id="shortLink" href="#" target="_blank" class="text-blue-400 hover:underline font-medium break-all"></a>
+                </div>
+            </div>
+
+            <!-- QR Code Display -->
+            <div class="flex flex-col items-center justify-center bg-slate-900 p-4 rounded-lg border border-slate-700/50">
+                <label class="block text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-2">Dynamic QR Code</label>
+                <img id="qrCodeImg" src="" alt="QR Code" class="w-40 h-40 bg-white p-2 rounded-lg hidden">
+            </div>
+        </div>
+    </div>
+
+    <!-- Frontend logic connecting to your Spring Boot API -->
+    <script>
+        async function shortenUrl() {
+            const originalUrl = document.getElementById('originalUrl').value;
+            const maxClicks = document.getElementById('maxClicks').value;
+
+            if (!originalUrl) {
+                alert('Please enter a valid URL');
+                return;
+            }
+
+            const requestBody = { originalUrl };
+            if (maxClicks) {
+                requestBody.maxClicks = parseInt(maxClicks);
+            }
+
+            try {
+                // Send data to your Spring Boot API
+                const response = await fetch('/api/urls', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) throw new Error('Failed to shorten URL');
+
+                const data = await response.json();
+
+                // Update UI with the response data
+                document.getElementById('shortLink').innerText = data.shortUrl;
+                document.getElementById('shortLink').href = data.shortUrl;
+                
+                // Point the QR code image directly to your API endpoint
+                const qrUrl = `/api/urls/${data.shortCode}/qrcode`;
+                const qrImg = document.getElementById('qrCodeImg');
+                qrImg.src = qrUrl;
+                qrImg.classList.remove('hidden');
+
+                // Reveal the result box
+                document.getElementById('resultBox').classList.remove('hidden');
+            } catch (error) {
+                alert('Error connecting to backend server.');
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>
